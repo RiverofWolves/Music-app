@@ -10,17 +10,35 @@
     <h3><a href="{{url_for('view_band', id=band.BandID)}}">{{ band.BandName }} ({{ band.FormedYear }})</a></h3>
     <p><strong>Home:</strong> {{ band.HomeLocation }}</p>
 
-    <h4>Members</h4>
+    <!-- <h4>Members</h4>
     <ul>
         {% for member in band.members %}
-        <li>{{ member.MemberName }} – {{ member.MainPosition }}</li>
+        <li>{{ member.MemberName }} {{ member.MainPosition }}</li>
+        {% endfor %}
+    </ul> -->
+
+
+    <h4>Members/Memberships</h4>
+    <ul>
+        {% for member_relationship in band.memberships%}
+            <li>
+                {{ member_relationship.member.MemberName}} - {{member_relationship.Role or member_relationship.member.MainPosition}}
+                {% if member_relationship.StartYear %}{{member_relationship.StartYear}}{% if member_relationship.EndYear %} - {{member_relationship.EndYear}}{%else%}- present {%endif%} {%endif%}
+            </li>
+            {% else %}
+            <li>No members assigned yet!</li>
         {% endfor %}
     </ul>
 
-    <h4>Albums</h4>
+
+<h4>Albums/Albums</h4>
     <ul>
-        {% for album in band.albums %}
-        <li>{{ album.AlbumTitle }} ({{ album.ReleaseYear }})</li>
+        {% for album_relationship in band.BandsAlbums%}
+            <li>
+                {{ album_relationship.album.AlbumName}} - {{album_relationship.Role or album_relationship.album.MainPosition}}
+            </li>
+            {% else %}
+            <li>No albums assigned yet!</li>
         {% endfor %}
     </ul>
 </section>
