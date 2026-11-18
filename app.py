@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
-from model import db, Bands, Members, Albums, admin
+from model import db, Bands, Members, Albums, admin, Memberships, BandsAlbums
 from flask_admin.contrib.sqla import ModelView
 import os
 
@@ -36,7 +36,10 @@ def index():
 @app.route('/bands/view')
 def view_by_band():
     bands = Bands.query.all()
-    return render_template('display_by_band.html', bands=bands)
+    bandalbums = BandsAlbums.query.all()
+    memberships = Memberships.query.all()
+    return render_template('display_by_band.html', bands=bands, bandalbums=bandalbums,
+    memberships=memberships)
 
 
 @app.route('/bands/view/<int:id>')
@@ -66,7 +69,7 @@ def add_member():
         new_member = Members(
             MemberName=request.form['membername'],
             MainPosition=request.form['mainposition'],
-            BandID=request.form['bandid']
+            #BandID=request.form['bandid']
         )
         db.session.add(new_member)
         db.session.commit()
@@ -81,13 +84,84 @@ def add_album():
         new_album = Albums(
             AlbumTitle=request.form['albumtitle'],
             ReleaseYear=request.form['releaseyear'],
-            BandID=request.form['bandid']
+            # BandID=request.form['bandid']
         )
         db.session.add(new_album)
         db.session.commit()
         return redirect(url_for('index'))
     return render_template('add_album.html', bands=bands)
 
+@app.route('/membership/add', methods=["GET", "POST"])
+def add_membership():
+    bands= Bands.query.all()
+    members = Members.query.all()
+
+    if request.method == "POST":
+        try:
+            membership = Memberships(
+                BandID = request.form.get('bandid'),
+                MemberID = request.form.get('memberid'),
+                Role = request.form.get('role'),
+                StartYear = request.form.get('startyear') or None,
+                EndYear = request.form.get('endyear') or None
+            )
+            db.session.add(membership)
+            db.session.commit()
+            return redirect(url_for('view_by_band'))
+        except Exception as e:
+            db.session.rollback()
+            error = f"Error adding new membership: {e}"
+            return render_template('add_membership.html', bands=bands, members=members, error=error)
+
+    return render_template('add_membership.html', bands=bands, members=members)
+
+@app.route('/memberships/edit/<int:id>', methods=['GET', 'POST'])
+def edit_membership(membership_id):
+    membership = Memberships.query.get_or_404(membership_id)
+    bands = Bands.query.all()
+    members = Members.query.all()
+    if request.method == 'POST':
+        membership.MembershipID = request.form.get('membership_id')
+        membership.BandID = request.form.get('bandid')
+        membership.MemberID = request.form.get('memberid')
+        membership.Role = request.form.get('role')
+        membership.StartYear = request.form.get('startyear') or None
+        membership.EndYear = request.form.get('endyear') or None
+        db.session.commit()
+        # flash('Membership updated', 'success')
+        return redirect(url_for('view_by_band'))
+    return render_template('edit_membership.html', membership=membership, bands=bands, members=members)
+@app.route('/memberships/delete/<int:id>')
+def delete_membership(id):
+    membership = Memberships.query.get_or_404(id)
+    db.session.delete(membership)
+    db.session.commit()
+    # flash('Membership removed', 'success')
+    return redirect(url_for('view_by_band'))
+        
+    
+
+@app.route('/bandalbum/add', methods=["GET", "POST"])
+def add_bandalbum():
+    bands= Bands.query.all()
+    albums = Albums.query.all()
+
+    if request.method == "POST":
+        try:
+            bandalbum = BandsAlbums(
+                BandID = request.form.get('bandid'),
+                AlbumID = request.form.get('albumid'),
+                Role = request.form.get('role'),
+            )
+            db.session.add(bandalbum)
+            db.session.commit()
+            return redirect(url_for('view_by_band'))
+        except Exception as e:
+            db.session.rollback()
+            error = f"Error adding new bandalbum: {e}"
+            return render_template('add_bandalbum.html', bands=bands, albums=albums, error=error)
+
+    return render_template('add_bandalbum.html', bands=bands, albums=albums)
 
 # Create DB and tables if they don't exist
 with app.app_context():
